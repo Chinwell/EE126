@@ -13,29 +13,6 @@
 # //  18 U.S.C. Section 1905.
 # //
 # Loading project my
-# Compile of ADD_A.vhd was successful with warnings.
-# Compile of ADD_B.vhd was successful.
-# Compile of alu.vhd was successful.
-# Compile of alucontrol.vhd was successful.
-# Compile of and2.vhd was successful.
-# Compile of cpucontrol.vhd was successful.
-# Compile of dmem.vhd was successful.
-# Compile of imem.vhd was successful.
-# Compile of mux5.vhd was successful.
-# Compile of MUX32_A.vhd was successful.
-# Compile of MUX32_B.vhd was successful.
-# Compile of MUX32_C.vhd was successful.
-# Compile of pc.vhd was successful.
-# Compile of pipelinedcpu0.vhd was successful.
-# Compile of piplelinedcpu0_tb.vhd was successful.
-# Compile of registers.vhd was successful.
-# Compile of ShiftLeft.vhd was successful.
-# Compile of signextend.vhd was successful.
-# Compile of EXMEM.vhd was successful.
-# Compile of IDEX.vhd was successful.
-# Compile of IFID.vhd was successful.
-# Compile of MEMWB.vhd was successful.
-# 22 compiles, 0 failed with no errors.
 # Compile of ADD_A.vhd was successful.
 # Compile of ADD_B.vhd was successful.
 # Compile of alu.vhd was successful.
@@ -61,7 +38,7 @@
 # 22 compiles, 0 failed with no errors.
 vsim work.plcpu_tb
 # vsim work.plcpu_tb 
-# Start time: 12:00:40 on Nov 04,2019
+# Start time: 14:37:21 on Nov 04,2019
 # ** Note: (vsim-3813) Design is being optimized due to module recompilation...
 # Loading std.standard
 # Loading std.textio(body)
@@ -73,6 +50,7 @@ vsim work.plcpu_tb
 # Loading work.pipelinedcpu0(struct)#1
 # Loading work.add_a(behavioral)#1
 add wave -position insertpoint sim:/plcpu_tb/*
+# Causality operation skipped due to absence of debug database file
 run
 # ** Warning: There is an 'U'|'X'|'W'|'Z'|'-' in an arithmetic operand, the result will be 'X'(es).
 #    Time: 0 ns  Iteration: 0  Instance: /plcpu_tb/UUT/U12
@@ -99,135 +77,5 @@ run
 run
 run
 run
-quit -sim
-# End time: 12:04:39 on Nov 04,2019, Elapsed time: 0:03:59
-# Errors: 0, Warnings: 10
-# Compile of ADD_A.vhd was successful.
-# Compile of ADD_B.vhd was successful.
-# Compile of alu.vhd was successful.
-# Compile of alucontrol.vhd was successful.
-# Compile of and2.vhd was successful.
-# Compile of cpucontrol.vhd was successful.
-# Compile of dmem.vhd was successful.
-# Compile of imem.vhd was successful.
-# Compile of mux5.vhd was successful.
-# Compile of MUX32_A.vhd was successful.
-# Compile of MUX32_B.vhd was successful.
-# Compile of MUX32_C.vhd was successful.
-# Compile of pc.vhd was successful.
-# Compile of pipelinedcpu0.vhd was successful.
-# Compile of piplelinedcpu0_tb.vhd was successful.
-# Compile of registers.vhd was successful.
-# Compile of ShiftLeft.vhd was successful.
-# Compile of signextend.vhd was successful.
-# Compile of EXMEM.vhd was successful.
-# Compile of IDEX.vhd was successful.
-# Compile of IFID.vhd was successful.
-# Compile of MEMWB.vhd was successful.
-# 22 compiles, 0 failed with no errors.
-vsim work.plcpu_tb
-# vsim work.plcpu_tb 
-# Start time: 12:04:53 on Nov 04,2019
-# ** Note: (vsim-3813) Design is being optimized due to module recompilation...
-# Loading std.standard
-# Loading std.textio(body)
-# Loading ieee.std_logic_1164(body)
-# Loading ieee.std_logic_arith(body)
-# Loading ieee.std_logic_signed(body)
-# Loading work.plcpu_tb(tb)#1
-# Loading ieee.numeric_std(body)
-# Loading work.pipelinedcpu0(struct)#1
-# Loading work.add_a(behavioral)#1
-add wave -position insertpoint sim:/plcpu_tb/*
-run
-# ** Warning: There is an 'U'|'X'|'W'|'Z'|'-' in an arithmetic operand, the result will be 'X'(es).
-#    Time: 0 ns  Iteration: 0  Instance: /plcpu_tb/UUT/U12
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 0 ns  Iteration: 0  Instance: /plcpu_tb/UUT/U7
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 0 ns  Iteration: 0  Instance: /plcpu_tb/UUT/U7
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 0 ns  Iteration: 0  Instance: /plcpu_tb/UUT/U4
-# ** Warning: There is an 'U'|'X'|'W'|'Z'|'-' in an arithmetic operand, the result will be 'X'(es).
-#    Time: 0 ns  Iteration: 1  Instance: /plcpu_tb/UUT/U12
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 0 ns  Iteration: 1  Instance: /plcpu_tb/UUT/U7
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 0 ns  Iteration: 1  Instance: /plcpu_tb/UUT/U7
-run
-run
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 280 ns  Iteration: 2  Instance: /plcpu_tb/UUT/U7
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 280 ns  Iteration: 2  Instance: /plcpu_tb/UUT/U7
-# ** Warning: There is an 'U'|'X'|'W'|'Z'|'-' in an arithmetic operand, the result will be 'X'(es).
-#    Time: 300 ns  Iteration: 4  Instance: /plcpu_tb/UUT/U12
-run
-run
-quit -sim
-# End time: 12:09:00 on Nov 04,2019, Elapsed time: 0:04:07
-# Errors: 0, Warnings: 10
-# Compile of ADD_A.vhd was successful.
-# Compile of ADD_B.vhd was successful.
-# Compile of alu.vhd was successful.
-# Compile of alucontrol.vhd was successful.
-# Compile of and2.vhd was successful.
-# Compile of cpucontrol.vhd was successful.
-# Compile of dmem.vhd was successful.
-# Compile of imem.vhd was successful.
-# Compile of mux5.vhd was successful.
-# Compile of MUX32_A.vhd was successful.
-# Compile of MUX32_B.vhd was successful.
-# Compile of MUX32_C.vhd was successful.
-# Compile of pc.vhd was successful.
-# Compile of pipelinedcpu0.vhd was successful.
-# Compile of piplelinedcpu0_tb.vhd was successful.
-# Compile of registers.vhd was successful.
-# Compile of ShiftLeft.vhd was successful.
-# Compile of signextend.vhd was successful.
-# Compile of EXMEM.vhd was successful.
-# Compile of IDEX.vhd was successful.
-# Compile of IFID.vhd was successful.
-# Compile of MEMWB.vhd was successful.
-# 22 compiles, 0 failed with no errors.
-vsim work.plcpu_tb
-# vsim work.plcpu_tb 
-# Start time: 12:09:19 on Nov 04,2019
-# ** Note: (vsim-3813) Design is being optimized due to module recompilation...
-# Loading std.standard
-# Loading std.textio(body)
-# Loading ieee.std_logic_1164(body)
-# Loading ieee.std_logic_arith(body)
-# Loading ieee.std_logic_signed(body)
-# Loading work.plcpu_tb(tb)#1
-# Loading ieee.numeric_std(body)
-# Loading work.pipelinedcpu0(struct)#1
-# Loading work.add_a(behavioral)#1
-add wave -position insertpoint sim:/plcpu_tb/*
-run
-# ** Warning: There is an 'U'|'X'|'W'|'Z'|'-' in an arithmetic operand, the result will be 'X'(es).
-#    Time: 0 ns  Iteration: 0  Instance: /plcpu_tb/UUT/U12
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 0 ns  Iteration: 0  Instance: /plcpu_tb/UUT/U7
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 0 ns  Iteration: 0  Instance: /plcpu_tb/UUT/U7
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 0 ns  Iteration: 0  Instance: /plcpu_tb/UUT/U4
-# ** Warning: There is an 'U'|'X'|'W'|'Z'|'-' in an arithmetic operand, the result will be 'X'(es).
-#    Time: 0 ns  Iteration: 1  Instance: /plcpu_tb/UUT/U12
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 0 ns  Iteration: 1  Instance: /plcpu_tb/UUT/U7
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 0 ns  Iteration: 1  Instance: /plcpu_tb/UUT/U7
-run
-run
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 280 ns  Iteration: 2  Instance: /plcpu_tb/UUT/U7
-# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
-#    Time: 280 ns  Iteration: 2  Instance: /plcpu_tb/UUT/U7
-# ** Warning: There is an 'U'|'X'|'W'|'Z'|'-' in an arithmetic operand, the result will be 'X'(es).
-#    Time: 300 ns  Iteration: 4  Instance: /plcpu_tb/UUT/U12
-run
-run
-# End time: 12:11:59 on Nov 04,2019, Elapsed time: 0:02:40
-# Errors: 0, Warnings: 10
+# End time: 14:39:43 on Nov 04,2019, Elapsed time: 0:02:22
+# Errors: 0, Warnings: 11

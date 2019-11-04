@@ -6,10 +6,12 @@ entity MEMWB is
 port(
      clk    : in  STD_LOGIC;
      rst    : in  STD_LOGIC;
+     MEM0   : in  STD_LOGIC_VECTOR(31 downto 0);
      MEM1   : in  STD_LOGIC_VECTOR(1 downto 0);
      MEM2   : in  STD_LOGIC_VECTOR(31 downto 0);  
      MEM3   : in  STD_LOGIC_VECTOR(31 downto 0);
      MEM4   : in  STD_LOGIC_VECTOR(4 downto 0);
+     WB0    : out STD_LOGIC_VECTOR(31 downto 0);
      WB1    : out STD_LOGIC;
      WB2    : out STD_LOGIC;
      WB3    : out STD_LOGIC_VECTOR(31 downto 0);  
@@ -23,17 +25,19 @@ begin
 	process(clk,rst) is
 	begin
 	      if rst = '1' then
+		  WB0 <= x"00000000";
 	          WB1 <= '0';
 	          WB2 <='0';
 	          WB3 <= x"00000000";  
 	          WB4 <= x"00000000";
 	          WB5 <= "00000";
 	      elsif (clk'event and clk = '1') then
+                  WB0 <= MEM0;
 	          WB1 <= MEM1(1);
 	          WB2 <= MEM1(0);      
-	          WB3<= MEM2;
+	          WB3 <= MEM2;
 	          WB4 <= MEM3;
-	          WB5<= MEM4;
+	          WB5 <= MEM4;
 	      end if;
 	end process;
 end behavioral;

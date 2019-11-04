@@ -7,6 +7,7 @@ entity EXMEM is
 port(
      clk    : in STD_LOGIC;
      rst    : in STD_LOGIC;
+     EX0    : in STD_LOGIC_VECTOR(31 downto 0);
      EX1    : in STD_LOGIC_VECTOR(1 downto 0);
      EX2    : in STD_LOGIC_VECTOR(2 downto 0);
      EX3    : in STD_LOGIC_VECTOR(31 downto 0);  
@@ -14,6 +15,7 @@ port(
      EX5    : in  STD_LOGIC_VECTOR(31 downto 0);
      EX6    : in  STD_LOGIC_VECTOR(31 downto 0);
      EX7    : in  STD_LOGIC_VECTOR(4 downto 0);
+     MEM0   : out STD_LOGIC_VECTOR(31 downto 0);
      MEM1   : out STD_LOGIC_VECTOR(1 downto 0);
      MEM2   : out STD_LOGIC;
      MEM3   : out STD_LOGIC;
@@ -31,6 +33,7 @@ begin
 	process(clk,rst) is
 	begin
 	if rst = '1' then
+	    MEM0 <= x"00000000";
 	    MEM1 <= "00";
             MEM2 <= '0';
             MEM3 <= '0';
@@ -41,6 +44,7 @@ begin
             MEM8 <= x"00000000";
             MEM9 <= "00000";
     elsif (clk'event and clk = '1') then
+        MEM0 <= EX0;
         MEM1 <= EX1;
         MEM2 <= EX2(2);
         MEM3 <= EX2(1);

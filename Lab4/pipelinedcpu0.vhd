@@ -229,6 +229,7 @@ component EXMEM is
 port(
      clk    : in STD_LOGIC;
      rst    : in STD_LOGIC;
+     EX0    : in STD_LOGIC_VECTOR(31 downto 0);
      EX1    : in STD_LOGIC_VECTOR(1 downto 0);
      EX2    : in STD_LOGIC_VECTOR(2 downto 0);
      EX3    : in STD_LOGIC_VECTOR(31 downto 0);  
@@ -236,6 +237,7 @@ port(
      EX5    : in  STD_LOGIC_VECTOR(31 downto 0);
      EX6    : in  STD_LOGIC_VECTOR(31 downto 0);
      EX7    : in  STD_LOGIC_VECTOR(4 downto 0);
+     MEM0   : out STD_LOGIC_VECTOR(31 downto 0);
      MEM1   : out STD_LOGIC_VECTOR(1 downto 0);
      MEM2   : out STD_LOGIC;
      MEM3   : out STD_LOGIC;
@@ -250,17 +252,19 @@ end component;
 
 component MEMWB is
 port(
-     clk           : in  STD_LOGIC;
-     rst           : in  STD_LOGIC;
+     clk        : in  STD_LOGIC;
+     rst        : in  STD_LOGIC;
+     MEM0       : in  STD_LOGIC_VECTOR(31 downto 0);
      MEM1       : in  STD_LOGIC_VECTOR(1 downto 0);
-     MEM2    : in  STD_LOGIC_VECTOR(31 downto 0);  
-     MEM3   : in  STD_LOGIC_VECTOR(31 downto 0);
+     MEM2       : in  STD_LOGIC_VECTOR(31 downto 0);  
+     MEM3       : in  STD_LOGIC_VECTOR(31 downto 0);
      MEM4       : in  STD_LOGIC_VECTOR(4 downto 0);
-     WB1   : out STD_LOGIC;
-     WB2   : out STD_LOGIC;
-     WB3   : out STD_LOGIC_VECTOR(31 downto 0);  
-     WB4  : out STD_LOGIC_VECTOR(31 downto 0);
-     WB5      : out STD_LOGIC_VECTOR(4 downto 0)
+     WB0        : out STD_LOGIC_VECTOR(31 downto 0);
+     WB1        : out STD_LOGIC;
+     WB2        : out STD_LOGIC;
+     WB3        : out STD_LOGIC_VECTOR(31 downto 0);  
+     WB4        : out STD_LOGIC_VECTOR(31 downto 0);
+     WB5        : out STD_LOGIC_VECTOR(4 downto 0)
 );
 end component;
 
@@ -289,10 +293,10 @@ begin
     U13: MUX32_B port map(IDEX8,IDEX9,IDEX5,MUX32_Bout);--
     U14: ALUControl port map(IDEX4,IDEX9(5 downto 0),ALUCTRLout);--
     U15: MUX5 port map(IDEX10,IDEX11,IDEX3,MUX5out);--
-    U16: EXMEM port map(clk,rst,IDEX1,IDEX2,ADD_Bout,ALUzero,ALUResult,IDEX8,MUX5out,EXMEM1,EXMEM2,EXMEM3,EXMEM4,EXMEM5,EXMEM6,EXMEM7,EXMEM8,EXMEM9);
+    U16: EXMEM port map(clk,rst,IDEX6,IDEX1,IDEX2,ADD_Bout,ALUzero,ALUResult,IDEX8,MUX5out,PCadd4MEM,EXMEM1,EXMEM2,EXMEM3,EXMEM4,EXMEM5,EXMEM6,EXMEM7,EXMEM8,EXMEM9);
     U17: AND2 port map(EXMEM2,EXMEM6,PCSrc);--
     U18: DMEM port map(EXMEM8,EXMEM7,EXMEM3,EXMEM4,clk,ReadData,MEMContents);--
-    U19: MEMWB port map(clk,rst,EXMEM1,ReadData,EXMEM7,EXMEM9,MEMWB1,MEMWB2,MEMWB3,MEMWB4,MEMWB5);
+    U19: MEMWB port map(clk,rst,PCadd4MEM,EXMEM1,ReadData,EXMEM7,EXMEM9,PCadd4WB,MEMWB1,MEMWB2,MEMWB3,MEMWB4,MEMWB5);
     U20: MUX32_C port map(MEMWB4,MEMWB3,MEMWB2,MUX32_Cout);--
 
     PCwrite <='1';
