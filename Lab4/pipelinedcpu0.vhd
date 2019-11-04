@@ -274,17 +274,18 @@ end component;
     signal IDEX2 : STD_LOGIC_VECTOR(2 downto 0);
     signal ALUCTRLout : STD_LOGIC_VECTOR(3 downto 0);
     signal IDEX10, IDEX11, MEMWB5, MUX5out, EXMEM9 : STD_LOGIC_VECTOR(4 downto 0);
-    signal PCin, PCout, AddAout, IFID1, IDEX6, PCadd4MEM, PCadd4WB, MUX32_Cout, ReadData1, IDEX7, ReadData2, IDEX8, EXMEM8, ALUResult, EXMEM7, MEMWB4, MUX32_Bout, ReadData, MEMWB3, ADD_Bout, EXMEM5, SIGNEXTENDout, IDEX9, SHIFTLEFTout, INST, IFID2 : STD_LOGIC_VECTOR(31 downto 0);
-    signal tmpReg, savedReg, MEMContents: STD_LOGIC_VECTOR(32*4-1 downto 0);
+    signal PCin, PCout, AddAout, IFID1, IDEX6, PC4MEM, PC4WB, MUX32_Cout, ReadData1, IDEX7, ReadData2, IDEX8, EXMEM8, ALUResult, EXMEM7, MEMWB4, MUX32_Bout, ReadData, MEMWB3, ADD_Bout, EXMEM5, SIGNEXTENDout, IDEX9, SHIFTLEFTout, INST, IFID2 : STD_LOGIC_VECTOR(31 downto 0);
+    signal four:std_logic_vector(31 downto 0):=X"00000004";
+    signal TMP_REGS, SAVED_REGS, MEMContents: STD_LOGIC_VECTOR(32*4-1 downto 0);
 
 begin
     U1: PC port map(clk,PCwrite,rst,PCin,PCout);--
     U2: MUX32_A port map(AddAout,EXMEM5,PCSrc,PCin);--
-    U3: ADD_A port map(PCout,X"00000004",AddAout);--
+    U3: ADD_A port map(PCout,four,AddAout);--
     U4: IMEM port map(PCout,INST);--
     U5: IFID port map(clk,rst,AddAout,INST,IFID1,IFID2);--
     U6: CPUControl port map(IFID2(31 downto 26),RegDst,Branch,MemRead,MemtoReg,MemWrite,ALUSrc,RegWrite,Jump,ALUOp);--
-    U7: registers port map(IFID2(25 downto 21),IFID2(20 downto 16),MEMWB5,MUX32_Cout,MEMWB1,clk,ReadData1,ReadData2,tmpReg,savedReg);--
+    U7: registers port map(IFID2(25 downto 21),IFID2(20 downto 16),MEMWB5,MUX32_Cout,MEMWB1,clk,ReadData1,ReadData2,TMP_REGS,SAVED_REGS);--
     U8: SignExtend port map(IFID2(15 downto 0),SIGNEXTENDout);--
     U9: IDEX port map(clk,rst,RegDst,Branch,MemRead,MemtoReg,MemWrite,ALUSrc,RegWrite,ALUOp,IFID1,ReadData1,ReadData2,SIGNEXTENDout,IFID2(20 downto 16),IFID2(15 downto 11),IDEX1,IDEX2,IDEX3,IDEX4,IDEX5,IDEX6,IDEX7,IDEX8,IDEX9,IDEX10,IDEX11);--
     U10: ADD_B port map(IDEX6,SHIFTLEFTout,ADD_Bout);--
@@ -293,33 +294,30 @@ begin
     U13: MUX32_B port map(IDEX8,IDEX9,IDEX5,MUX32_Bout);--
     U14: ALUControl port map(IDEX4,IDEX9(5 downto 0),ALUCTRLout);--
     U15: MUX5 port map(IDEX10,IDEX11,IDEX3,MUX5out);--
-    U16: EXMEM port map(clk,rst,IDEX6,IDEX1,IDEX2,ADD_Bout,ALUzero,ALUResult,IDEX8,MUX5out,PCadd4MEM,EXMEM1,EXMEM2,EXMEM3,EXMEM4,EXMEM5,EXMEM6,EXMEM7,EXMEM8,EXMEM9);
+    U16: EXMEM port map(clk,rst,IDEX6,IDEX1,IDEX2,ADD_Bout,ALUzero,ALUResult,IDEX8,MUX5out,PC4MEM,EXMEM1,EXMEM2,EXMEM3,EXMEM4,EXMEM5,EXMEM6,EXMEM7,EXMEM8,EXMEM9);
     U17: AND2 port map(EXMEM2,EXMEM6,PCSrc);--
     U18: DMEM port map(EXMEM8,EXMEM7,EXMEM3,EXMEM4,clk,ReadData,MEMContents);--
-    U19: MEMWB port map(clk,rst,PCadd4MEM,EXMEM1,ReadData,EXMEM7,EXMEM9,PCadd4WB,MEMWB1,MEMWB2,MEMWB3,MEMWB4,MEMWB5);
+    U19: MEMWB port map(clk,rst,PC4MEM,EXMEM1,ReadData,EXMEM7,EXMEM9,PC4WB,MEMWB1,MEMWB2,MEMWB3,MEMWB4,MEMWB5);
     U20: MUX32_C port map(MEMWB4,MEMWB3,MEMWB2,MUX32_Cout);--
 
     PCwrite <='1';
-    DEBUG_INSTRUCTION <= IFID2;
-    DEBUG_TMP_REGS <= tmpReg;
-    DEBUG_SAVED_REGS <= savedReg;
+    --DEBUG_INSTRUCTION <= IFID2;
+    DEBUG_INSTRUCTION <= INST;
+    DEBUG_TMP_REGS <= TMP_REGS;
+    DEBUG_SAVED_REGS <= SAVED_REGS;
     DEBUG_MEM_CONTENTS <= MEMContents;
-
     DEBUG_PC <= PCout;
     DEBUG_PCPlus4_ID <= IFID1;
     DEBUG_PCPlus4_EX <= IDEX6;
-    DEBUG_PCPlus4_MEM <= PCadd4MEM;
-    DEBUG_PCPlus4_WB <= PCadd4WB;
-    -- instruction is a store.
+    DEBUG_PCPlus4_MEM <= PC4MEM;
+    DEBUG_PCPlus4_WB <= PC4WB;
     DEBUG_MemWrite <= MemWrite;
     DEBUG_MemWrite_EX <= IDEX2(0);
     DEBUG_MemWrite_MEM <= EXMEM4;
-    -- instruction writes the regfile.
     DEBUG_RegWrite <= RegWrite;
     DEBUG_RegWrite_EX <= IDEX1(1);
     DEBUG_RegWrite_MEM <= EXMEM1(1);
     DEBUG_RegWrite_WB <= RegWrite;
-    -- instruction is a branch or a jump.
     DEBUG_Branch <= Branch;
     DEBUG_Jump <= Jump;
 
