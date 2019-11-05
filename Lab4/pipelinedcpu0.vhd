@@ -317,7 +317,7 @@ begin
     DEBUG_RegWrite <= RegWrite;
     DEBUG_RegWrite_EX <= IDEX1(1);
     DEBUG_RegWrite_MEM <= EXMEM1(1);
-    DEBUG_RegWrite_WB <= RegWrite;
+    DEBUG_RegWrite_WB <= MEMWB1;
     DEBUG_Branch <= Branch;
     DEBUG_Jump <= Jump;
 
