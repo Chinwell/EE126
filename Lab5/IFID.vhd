@@ -6,6 +6,7 @@ entity IFID is
 port(
      clk    : in   STD_LOGIC; 
      rst    : in   STD_LOGIC;
+     w_enable  : in   STD_LOGIC;
      IF1    : in   STD_LOGIC_VECTOR(31 downto 0); 
      IF2    : in   STD_LOGIC_VECTOR(31 downto 0); 
      ID1    : out  STD_LOGIC_VECTOR(31 downto 0); 
@@ -20,7 +21,7 @@ begin
 	      if rst = '1' then
 	          ID1 <= X"00000000";
 	          ID2 <= X"00000000";
-	      elsif (clk'event and clk = '1') then
+	      elsif (w_enable = '1' and clk'event and clk = '1') then
 	          ID1 <= IF1;
 	          ID2 <= IF2;
 	      end if;

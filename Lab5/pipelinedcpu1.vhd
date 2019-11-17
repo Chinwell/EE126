@@ -1,0 +1,424 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.std_logic_signed.all;
+
+entity PipelinedCPU1 is
+port(
+     clk :in std_logic;
+     rst :in std_logic;
+     --Probe ports used for testing or for the tracker.
+     -- Forwarding control signals
+     DEBUG_FORWARDA : out std_logic_vector(1 downto 0);
+     DEBUG_FORWARDB : out std_logic_vector(1 downto 0);
+
+     --The current address (in various pipe stages)
+     DEBUG_PC, DEBUG_PCPlus4_ID, DEBUG_PCPlus4_EX, DEBUG_PCPlus4_MEM,
+               DEBUG_PCPlus4_WB: out STD_LOGIC_VECTOR(31 downto 0);
+     -- instruction is a store.
+     DEBUG_MemWrite, DEBUG_MemWrite_EX, DEBUG_MemWrite_MEM: out STD_LOGIC;
+     -- instruction writes the regfile.
+     DEBUG_RegWrite, DEBUG_RegWrite_EX, DEBUG_RegWrite_MEM, DEBUG_RegWrite_WB: out std_logic;
+     -- instruction is a branch or a jump.
+     DEBUG_Branch, DEBUG_Jump: out std_logic;
+
+     --The current instruction (Instruction output of IMEM)
+     DEBUG_INSTRUCTION : out std_logic_vector(31 downto 0);
+     --DEBUG ports from other components
+     DEBUG_TMP_REGS : out std_logic_vector(32*4 - 1 downto 0);
+     DEBUG_SAVED_REGS : out std_logic_vector(32*4 - 1 downto 0);
+     DEBUG_MEM_CONTENTS : out std_logic_vector(32*4 - 1 downto 0);
+     --Value of PC.write_enable
+     DEBUG_PC_WRITE_ENABLE : out STD_LOGIC
+);
+end PipelinedCPU1;
+
+architecture arch of PipelinedCPU1 is
+
+component PC is 
+port(
+     clk          : in  STD_LOGIC;
+     write_enable : in  STD_LOGIC:='1';
+     rst          : in  STD_LOGIC;
+     AddressIn    : in  STD_LOGIC_VECTOR(31 downto 0);
+     AddressOut   : out STD_LOGIC_VECTOR(31 downto 0)
+);
+end component;
+
+component IMEM is
+generic(NUM_BYTES : integer := 128);
+port(
+     Address  : in  STD_LOGIC_VECTOR(31 downto 0);
+     ReadData : out STD_LOGIC_VECTOR(31 downto 0)
+);
+end component;
+
+component ADD_A is
+port(
+     in0    : in  STD_LOGIC_VECTOR(31 downto 0);
+     in1    : in  STD_LOGIC_VECTOR(31 downto 0);
+     output : out STD_LOGIC_VECTOR(31 downto 0)
+);
+end component;
+
+component MUX32_A is
+port(
+    in0    : in STD_LOGIC_VECTOR(31 downto 0);
+    in1    : in STD_LOGIC_VECTOR(31 downto 0);
+    sel    : in STD_LOGIC;
+    output : out STD_LOGIC_VECTOR(31 downto 0)
+);
+end component;
+
+component IFID is 
+port(
+     clk    : in   STD_LOGIC; 
+     rst    : in   STD_LOGIC;
+     w_enable  : in   STD_LOGIC;
+     IF1    : in   STD_LOGIC_VECTOR(31 downto 0); 
+     IF2    : in   STD_LOGIC_VECTOR(31 downto 0); 
+     ID1    : out  STD_LOGIC_VECTOR(31 downto 0); 
+     ID2    : out  STD_LOGIC_VECTOR(31 downto 0)
+);
+end component;
+
+component harzard is 
+port(
+    IFIDrs	: in STD_LOGIC_VECTOR(4 downto 0);
+    IFIDrt	: in STD_LOGIC_VECTOR(4 downto 0);    
+    IDEXMEMr	: in std_logic;
+    IDEXrt	: in STD_LOGIC_VECTOR(4 downto 0);
+    PCw		: out std_logic;
+    IFIDw	: out std_logic;
+    MuxControl	: out std_logic
+);
+end component;
+
+component CPUControl is
+port(Opcode   : in  STD_LOGIC_VECTOR(5 downto 0);
+     RegDst   : out STD_LOGIC;
+     Branch   : out STD_LOGIC;
+     MemRead  : out STD_LOGIC;
+     MemtoReg : out STD_LOGIC;
+     MemWrite : out STD_LOGIC;
+     ALUSrc   : out STD_LOGIC;
+     RegWrite : out STD_LOGIC;
+     Jump     : out STD_LOGIC;
+     ALUOp    : out STD_LOGIC_VECTOR(1 downto 0)
+);
+end component;
+
+component registers is
+port(RR1      : in  STD_LOGIC_VECTOR (4 downto 0); 
+     RR2      : in  STD_LOGIC_VECTOR (4 downto 0); 
+     WR       : in  STD_LOGIC_VECTOR (4 downto 0); 
+     WD       : in  STD_LOGIC_VECTOR (31 downto 0);
+     RegWrite : in  STD_LOGIC;
+     Clock    : in  STD_LOGIC;
+     RD1      : out STD_LOGIC_VECTOR (31 downto 0);
+     RD2      : out STD_LOGIC_VECTOR (31 downto 0);
+     DEBUG_TMP_REGS : out STD_LOGIC_VECTOR(32*4 - 1 downto 0);
+     DEBUG_SAVED_REGS : out STD_LOGIC_VECTOR(32*4 - 1 downto 0)
+);
+end component;
+
+component SignExtend is
+port(
+     x : in  STD_LOGIC_VECTOR(15 downto 0);
+     y : out STD_LOGIC_VECTOR(31 downto 0)
+);
+end component;
+
+component mux is 
+port(
+    RegDst_in   : in STD_LOGIC:='0';
+    Branch_in   : in STD_LOGIC:='0';
+    MemRead_in  : in STD_LOGIC:='0';
+    MemtoReg_in : in STD_LOGIC:='0';
+    MemWrite_in : in STD_LOGIC:='0';
+    ALUSrc_in   : in STD_LOGIC:='0';
+    RegWrite_in : in STD_LOGIC:='0';
+    Jump_in     : in STD_LOGIC:='0';
+    ALUOp_in    : in STD_LOGIC_VECTOR(1 downto 0):="00";
+    sel         : in std_logic;
+
+    RegDst_out  : out STD_LOGIC:='0';
+    Branch_out  : out STD_LOGIC:='0';
+    MemRead_out : out STD_LOGIC:='0';
+    MemtoReg_out    : out STD_LOGIC:='0';
+    MemWrite_out    : out STD_LOGIC:='0';
+    ALUSrc_out  : out STD_LOGIC:='0';
+    RegWrite_out    : out STD_LOGIC:='0';
+    Jump_out    : out STD_LOGIC:='0';
+    ALUOp_out   : out STD_LOGIC_VECTOR(1 downto 0):="00"
+);
+end component;
+
+component IDEX is 
+port(
+     clk	: in STD_LOGIC;
+     rst	: in STD_LOGIC;
+     ID1	: in STD_LOGIC;
+     ID2	: in STD_LOGIC;
+     ID3	: in STD_LOGIC;
+     ID4	: in STD_LOGIC;
+     ID5	: in STD_LOGIC;
+     ID6	: in STD_LOGIC;
+     ID7	: in STD_LOGIC;
+     ID8	: in STD_LOGIC_VECTOR(1 downto 0);
+     ID9	: in  STD_LOGIC_VECTOR(31 downto 0);  
+     ID10	: in  STD_LOGIC_VECTOR(31 downto 0);
+     ID11	: in  STD_LOGIC_VECTOR(31 downto 0); 
+     ID12	: in  STD_LOGIC_VECTOR(31 downto 0);
+     ID13	: in STD_LOGIC_VECTOR(4 downto 0);
+     ID14	: in STD_LOGIC_VECTOR(4 downto 0);
+     ID15	: in STD_LOGIC_VECTOR(4 downto 0);
+     EX1	: out STD_LOGIC_VECTOR(1 downto 0);
+     EX2	: out STD_LOGIC_VECTOR(2 downto 0);
+     EX3	: out STD_LOGIC;
+     EX4	: out STD_LOGIC;
+     EX5	: out STD_LOGIC_VECTOR(1 downto 0);
+     EX6	: out STD_LOGIC_VECTOR(31 downto 0);
+     EX7	: out STD_LOGIC_VECTOR(31 downto 0);
+     EX8	: out STD_LOGIC_VECTOR(31 downto 0); 
+     EX9	: out STD_LOGIC_VECTOR(31 downto 0);
+     EX10	: out STD_LOGIC_VECTOR(4 downto 0);
+     EX11	: out STD_LOGIC_VECTOR(4 downto 0);
+     EX12	: out STD_LOGIC_VECTOR(4 downto 0)
+);
+end component;
+
+component ShiftLeft is
+port(
+     x : in  STD_LOGIC_VECTOR(31 downto 0);
+     y : out STD_LOGIC_VECTOR(31 downto 0)
+);
+end component;
+
+component MUX32_3A is
+port(
+    in0    : in STD_LOGIC_VECTOR(31 downto 0);
+    in1    : in STD_LOGIC_VECTOR(31 downto 0);
+    in2    : in STD_LOGIC_VECTOR(31 downto 0);
+    sel    : in STD_LOGIC_VECTOR(1 downto 0);
+    output : out STD_LOGIC_VECTOR(31 downto 0)
+);
+end component;
+
+component MUX32_3B is
+port(
+    in0    : in STD_LOGIC_VECTOR(31 downto 0);
+    in1    : in STD_LOGIC_VECTOR(31 downto 0);
+    in2    : in STD_LOGIC_VECTOR(31 downto 0);
+    sel    : in STD_LOGIC_VECTOR(1 downto 0);
+    output : out STD_LOGIC_VECTOR(31 downto 0)
+);
+end component;
+
+component MUX32_B is
+port(
+    in0    : in STD_LOGIC_VECTOR(31 downto 0);
+    in1    : in STD_LOGIC_VECTOR(31 downto 0);
+    sel    : in STD_LOGIC;
+    output : out STD_LOGIC_VECTOR(31 downto 0)
+);
+end component;
+
+component ADD_B is
+port(
+     in0    : in  STD_LOGIC_VECTOR(31 downto 0);
+     in1    : in  STD_LOGIC_VECTOR(31 downto 0);
+     output : out STD_LOGIC_VECTOR(31 downto 0)
+);
+end component;
+
+component ALU is 
+port(
+     a         : in     STD_LOGIC_VECTOR(31 downto 0);
+     b         : in     STD_LOGIC_VECTOR(31 downto 0);
+     operation : in     STD_LOGIC_VECTOR(3 downto 0);
+     result    : buffer STD_LOGIC_VECTOR(31 downto 0);
+     zero      : buffer STD_LOGIC;
+     overflow  : buffer STD_LOGIC
+);
+end component;
+
+component ALUControl is
+port(
+     ALUOp     : in  STD_LOGIC_VECTOR(1 downto 0);
+     Funct     : in  STD_LOGIC_VECTOR(5 downto 0);
+     Operation : out STD_LOGIC_VECTOR(3 downto 0)
+);
+end component;
+
+component MUX5 is
+port(
+    in0    : in STD_LOGIC_VECTOR(4 downto 0);
+    in1    : in STD_LOGIC_VECTOR(4 downto 0);
+    sel    : in STD_LOGIC;
+    output : out STD_LOGIC_VECTOR(4 downto 0)
+);
+end component;
+
+component forward is 
+port(
+     IDEXrs : in STD_LOGIC_VECTOR(4 downto 0);
+     IDEXrt	: in STD_LOGIC_VECTOR(4 downto 0);
+     EXMEMrd	: in STD_LOGIC_VECTOR(4 downto 0);
+     MEMWBrd	: in STD_LOGIC_VECTOR(4 downto 0);
+     EXMEMw	: in STD_LOGIC;
+     MEMWBw	: in STD_LOGIC; 
+     ForwardA	: out STD_LOGIC_VECTOR(1 downto 0);
+     ForwardB	: out STD_LOGIC_VECTOR(1 downto 0)
+);
+end  component;
+
+component EXMEM is
+port(
+     clk    : in STD_LOGIC;
+     rst    : in STD_LOGIC;
+     EX0    : in STD_LOGIC_VECTOR(31 downto 0);
+     EX1    : in STD_LOGIC_VECTOR(1 downto 0);
+     EX2    : in STD_LOGIC_VECTOR(2 downto 0);
+     EX3    : in STD_LOGIC_VECTOR(31 downto 0);  
+     EX4    : in STD_LOGIC;
+     EX5    : in  STD_LOGIC_VECTOR(31 downto 0);
+     EX6    : in  STD_LOGIC_VECTOR(31 downto 0);
+     EX7    : in  STD_LOGIC_VECTOR(4 downto 0);
+     MEM0   : out STD_LOGIC_VECTOR(31 downto 0);
+     MEM1   : out STD_LOGIC_VECTOR(1 downto 0);
+     MEM2   : out STD_LOGIC;
+     MEM3   : out STD_LOGIC;
+     MEM4   : out STD_LOGIC;
+     MEM5   : out STD_LOGIC_VECTOR(31 downto 0);  
+     MEM6   : out STD_LOGIC;
+     MEM7   : out STD_LOGIC_VECTOR(31 downto 0);
+     MEM8   : out STD_LOGIC_VECTOR(31 downto 0);   
+     MEM9   : out STD_LOGIC_VECTOR(4 downto 0)
+);
+end component;
+
+component AND2 is
+port (
+      in0    : in  STD_LOGIC;
+      in1    : in  STD_LOGIC;
+      output : out STD_LOGIC
+);
+end component;
+
+component DMEM is
+generic(NUM_BYTES : integer := 32);
+port(
+     WriteData          : in  STD_LOGIC_VECTOR(31 downto 0);
+     Address            : in  STD_LOGIC_VECTOR(31 downto 0);
+     MemRead            : in  STD_LOGIC;
+     MemWrite           : in  STD_LOGIC;
+     Clock              : in  STD_LOGIC;
+     ReadData           : out STD_LOGIC_VECTOR(31 downto 0);
+     DEBUG_MEM_CONTENTS : out STD_LOGIC_VECTOR(32*4 - 1 downto 0)
+);
+end component;
+
+component MEMWB is
+port(
+     clk    : in  STD_LOGIC;
+     rst    : in  STD_LOGIC;
+     MEM0   : in  STD_LOGIC_VECTOR(31 downto 0);
+     MEM1   : in  STD_LOGIC_VECTOR(1 downto 0);
+     MEM2   : in  STD_LOGIC_VECTOR(31 downto 0);  
+     MEM3   : in  STD_LOGIC_VECTOR(31 downto 0);
+     MEM4   : in  STD_LOGIC_VECTOR(4 downto 0);
+     WB0    : out STD_LOGIC_VECTOR(31 downto 0);
+     WB1    : out STD_LOGIC;
+     WB2    : out STD_LOGIC;
+     WB3    : out STD_LOGIC_VECTOR(31 downto 0);  
+     WB4    : out STD_LOGIC_VECTOR(31 downto 0);
+     WB5    : out STD_LOGIC_VECTOR(4 downto 0)
+);
+end component;
+
+component MUX32_C is
+port(
+    in0    : in STD_LOGIC_VECTOR(31 downto 0);
+    in1    : in STD_LOGIC_VECTOR(31 downto 0);
+    sel    : in STD_LOGIC;
+    output : out STD_LOGIC_VECTOR(31 downto 0)
+);
+end component;
+
+signal muxSel, PCsrc, ALUzero , EXMEM7 , ALUoverflow, RegDstID_CTRL , BranchID_CTRL , MemReadID_CTRL , MemtoRegID_CTRL , MemWriteID_CTRL , ALUSrcID_CTRL , RegWriteID_CTRL , JumpID_CTRL, PCwrite , IFIDwrite, RegDst_MUX , IDEX3 , Branch_MUX , EXMEM3 , MemRead_MUX , MemtoReg_MUX , EXMEM4 , MEMWB2 , MemWrite_MUX , EXMEM5 , ALUSrc_MUX , IDEX4 , RegWrite_MUX , MEMWB1 , Jump_MUX: STD_LOGIC;
+
+signal IDEX1, EXMEM2, ALUOp_MUX, ALUOpID_CTRL , IDEX5, ForwardOutA , ForwardOutB : STD_LOGIC_VECTOR(1 downto 0);
+
+signal IDEX2 : STD_LOGIC_VECTOR(2 downto 0);
+
+signal ALUCTRLout : STD_LOGIC_VECTOR(3 downto 0);
+
+signal IDEX11 , IDEX12 , IDEX10, MEMWB5 , MUX5out , EXMEM10 : STD_LOGIC_VECTOR(4 downto 0);
+
+signal MUX32_3Aout , MUX32_3Bout, ReadData , MEMWB3, ALUout , EXMEM8 , MEMWB4 , MUX32_Bout, MUX32_Cout , ReadData1 , IDEX7 , ReadData2 , IDEX8 , EXMEM9, ADD_Bout, EXMEM6, SignExtendOut, IDEX9 , SLout, PCin , PCout , ADD4out , IFID1 , IDEX6 , EXMEM1 , MEMWB0, Inst , IFID2 : STD_LOGIC_VECTOR(31 downto 0);
+
+signal TmpReg , SavedReg : STD_LOGIC_VECTOR(32*4-1 downto 0);
+
+signal MemContents: STD_LOGIC_VECTOR(32*4-1 downto 0);
+
+begin
+
+U1: PC port map(clk, PCwrite, rst, PCin, PCout);
+U2: MUX32_A port map(ADD4out, EXMEM6, PCsrc, PCin);
+U3: ADD_A port map(PCout, X"00000004", ADD4out);
+U4: IMEM port map(PCout, Inst);
+
+U5: IFID port map(clk, rst, IFIDwrite, ADD4out, Inst, IFID1, IFID2);
+
+U6: harzard port map(IFID2(20 downto 16), IFID2(15 downto 11), IDEX2(1), IDEX11, PCwrite, IFIDwrite, muxSel);
+U7: CPUControl port map(IFID2(31 downto 26), RegDstID_CTRL, BranchID_CTRL, MemReadID_CTRL, MemtoRegID_CTRL, MemWriteID_CTRL, ALUSrcID_CTRL, RegWriteID_CTRL, JumpID_CTRL, ALUOpID_CTRL);
+U8: mux port map(RegDstID_CTRL, BranchID_CTRL, MemReadID_CTRL, MemtoRegID_CTRL, MemWriteID_CTRL, ALUSrcID_CTRL, RegWriteID_CTRL, JumpID_CTRL, ALUOpID_CTRL, muxSel, RegDst_MUX, Branch_MUX, MemRead_MUX, MemtoReg_MUX, MemWrite_MUX, ALUSrc_MUX, RegWrite_MUX, Jump_MUX, ALUOp_MUX);
+U9: registers port map(IFID2(25 downto 21), IFID2(20 downto 16), MEMWB5, MUX32_Cout, MEMWB1, clk, ReadData1, ReadData2, TmpReg, SavedReg);
+U10: SignExtend port map(IFID2(15 downto 0), SignExtendOut);
+
+U11: IDEX port map(clk, rst, RegDst_MUX, Branch_MUX, MemRead_MUX, MemtoReg_MUX, MemWrite_MUX, ALUSrc_MUX, RegWrite_MUX, ALUOp_MUX, IFID1, ReadData1, ReadData2, SignExtendOut, IFID2(25 downto 21), IFID2(20 downto 16), IFID2(15 downto 11), IDEX1, IDEX2, IDEX3, IDEX4, IDEX5, IDEX6, IDEX7, IDEX8, IDEX9, IDEX10, IDEX11, IDEX12);
+
+U12: ShiftLeft port map(IDEX9, SLout);
+U13: ADD_B port map(IDEX6,SLout,ADD_Bout);
+U14: MUX32_3A port map(IDEX7,MUX32_Cout,EXMEM8,ForwardOutA,MUX32_3Aout);
+U15: MUX32_3B port map(IDEX8,MUX32_Cout,EXMEM8,ForwardOutB,MUX32_3Bout);
+U16: MUX32_B port map(MUX32_3Bout,IDEX9,IDEX4,MUX32_Bout);
+U17: ALU port map(MUX32_3Aout,MUX32_Bout,ALUCTRLout,ALUout,ALUzero,ALUoverflow);
+U18: ALUControl port map(IDEX5,IDEX9(5 downto 0),ALUCTRLout);
+U19: MUX5 port map(IDEX11,IDEX12,IDEX3,MUX5out);
+U20: forward port map(IDEX10,IDEX11,EXMEM10,MEMWB5,EXMEM2(1),MEMWB1,ForwardOutA,ForwardOutB);
+
+U21: EXMEM port map(clk,rst, IDEX6,IDEX1,IDEX2,ADD_Bout,ALUzero,ALUout,MUX32_3Bout,MUX5out,EXMEM1,EXMEM2,EXMEM3,EXMEM4,EXMEM5,EXMEM6,EXMEM7,EXMEM8,EXMEM9,EXMEM10);
+
+U22: AND2 port map(EXMEM3,EXMEM7,PCsrc);
+U23: DMEM port map(EXMEM9,EXMEM8,EXMEM4,EXMEM5,clk,ReadData,MemContents);
+
+U24: MEMWB port map(clk, rst, EXMEM1, EXMEM2, ReadData, EXMEM8, EXMEM10, MEMWB0, MEMWB1, MEMWB2, MEMWB3, MEMWB4, MEMWB5);
+
+U25: MUX32_C port map(MEMWB4,MEMWB3,MEMWB2,MUX32_Cout);
+
+DEBUG_FORWARDA <= ForwardOutA;
+DEBUG_FORWARDB <= ForwardOutB;
+DEBUG_PC <= PCout;
+DEBUG_PCPlus4_ID <= IFID1;
+DEBUG_PCPlus4_EX <= IDEX6;
+DEBUG_PCPlus4_MEM <= EXMEM1;
+DEBUG_PCPlus4_WB <= MEMWB0;
+DEBUG_MemWrite <= MemWrite_MUX;
+DEBUG_MemWrite_EX <= IDEX2(0);
+DEBUG_MemWrite_MEM <= EXMEM5;
+DEBUG_RegWrite <= RegWrite_MUX;
+DEBUG_RegWrite_EX <= IDEX1(1);
+DEBUG_RegWrite_MEM <= EXMEM2(1);
+DEBUG_RegWrite_WB <= MEMWB1;
+DEBUG_Branch <= Branch_MUX;
+DEBUG_Jump <= Jump_MUX;
+DEBUG_INSTRUCTION <= Inst;
+DEBUG_TMP_REGS <= TmpReg;
+DEBUG_SAVED_REGS <= SavedReg;
+DEBUG_MEM_CONTENTS <= MemContents;
+DEBUG_PC_WRITE_ENABLE <= PCwrite;
+
+end architecture arch;
+
+--worked with Ruoxi...
